@@ -33,11 +33,9 @@ def PreprocData():
 
   #print(namemissing)
 
-  OUTPUT_COLS = ["'Histol-definitive'"]  # ,"'mal_wo_NIFT'",	"'capsule_s'",
-# "'capsule'",	"'caps_invas_s'",	"'vasc_invas_s'",
-# "'p-size-s'",	"'#LNM_s'",	"'#LN_resec_s'",
-# "'#LN_resec'",	"'size_LN_s'",	"'conc. Cancer_s'",	"'T_dx_s'",
-# "'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
+  OUTPUT_COLS = ["'Histol-definitive'","'mal_wo_NIFT'","'capsule_s'","'capsule'",	"'caps_invas_s'",	"'vasc_invas_s'","'p-size-s'",	"'#LNM_s'",	"'#LN_resec_s'","'#LN_resec'",	"'size_LN_s'",	"'conc. Cancer_s'",	"'T_dx_s'","'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
+  for label in dropLabels:
+    if label in OUTPUT_COLS:OUTPUT_COLS.remove(label)
 # DROP_COLS=["'cancer risk'","'ID'"] #,"'malignant'"]
 
   DROP_COLS = ["'ID'"]+dropLabels
@@ -59,16 +57,16 @@ def PreprocData():
   inputsNormed=inNormalizer.transform(inputs)
   outputsNormed=outNormalizer.transform(outputs)
   #separate into train and test set
-  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs))
+  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(len(OUTPUT_COLS),inputs.shape[0])
 
 
 BATCH_SIZE=50
-data,normalizers,labels=PreprocData()
+data,normalizers,labels,IOsizes=PreprocData()
 
 trainingData,testingData=SeparateData(data[0],data[1],0.4,BATCH_SIZE,True)
 #create graph
 #netTF=FullyConnectedNetwork([100,100,100],trainingData[0].shape[1],trainingData[1].shape[1])
-netTF=FullyConnectedNetwork([10],trainingData[0].shape[1],trainingData[1].shape[1])
+netTF=FullyConnectedNetwork([300,200,100],trainingData[0].shape[1],trainingData[1].shape[1])
 
 #pass graph components to interface
 net=TFinterface(netTF.graph,netTF.OutputLayerTF,netTF.ErrorTF,netTF.TrainTF,netTF.GradsTF,netTF.InitVarsTF,"inputsPL","outputsPL","dropoutPL","outMasksPL")
@@ -80,8 +78,8 @@ errorVals=net.GenAndRunBatchTraining(trainingData[0],trainingData[1],BATCH_SIZE,
 outputs,error=net.Test(testingData[0],testingData[1])
 
 #get gradient values on testing data
-gradVals=net.GetGradientValues(testingData[0],testingData[1],[1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
-gradSums=SumGradients(gradVals)
+#gradVals=net.GetGradientValues(testingData[0],testingData[1],[1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
+#gradSums=SumGradients(gradVals)
 
 #Plot training and testing error
 axs=GenAxs(1,1)
@@ -89,12 +87,12 @@ axs=GenAxs(1,1)
 PlotTrainingError(axs[0],errorVals,error)
 plt.show()
 
-axs=GenAxs(1,1)
-PlotGradSums(axs[0],gradSums,labels[0])
-plt.show()
+#axs=GenAxs(1,1)
+#PlotGradSums(axs[0],gradSums,labels[0])
+#plt.show()
 
-df = pd.DataFrame(gradSums)
-df.to_csv("SaveGradSums_HisDef.csv")
+#df = pd.DataFrame(gradSums)
+#df.to_csv("SaveGradSums_HisDef.csv")
 
 dfL = pd.DataFrame(labels[0])
 dfL.to_csv("SaveLabels.csv")
