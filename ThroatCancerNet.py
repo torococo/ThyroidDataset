@@ -10,9 +10,22 @@ import numpy as np
 from Utils import *
 
 """DATA PREPROC"""
+
+def GetNanDropLabels(raw,acceptableNanProp):
+  labels=list(raw)
+  minAcceptable=acceptableNanProp*raw.shape[0]
+  print(minAcceptable)
+  nullSums= raw.isnull().sum()
+  ret=[]
+  for label in labels:
+    if nullSums[label]>minAcceptable: ret.append(label)
+  return ret
+
+
 def PreprocData():
   #separate inputs and outputs
   raw = pd.read_excel("USETHISFM.xlsx")
+  dropLabels=GetNanDropLabels(raw,0.1)
   #missingpercentage = pd.read_csv("Missing.csv")
 
   #indexmissing = np.where(missingpercentage >= 0.5)
@@ -27,8 +40,8 @@ def PreprocData():
 # "'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
 # DROP_COLS=["'cancer risk'","'ID'"] #,"'malignant'"]
 
-  DROP_COLS = ["'ID'"]
-  ## ,namemissing]
+  DROP_COLS = ["'ID'"]+dropLabels
+  # ,namemissing]
 # DROP_COLS=["'ID'","'mal_wo_NIFT'",	"'capsule_s'",
 #           "'capsule'",	"'caps_invas_s'",	"'vasc_invas_s'",
 #           "'p-size-s'",	"'#LNM_s'",	"'#LN_resec_s'",
