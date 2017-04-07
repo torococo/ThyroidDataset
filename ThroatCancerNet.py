@@ -49,10 +49,10 @@ def PreprocData():
   raw = raw.drop(DROP_COLS, axis=1)
 
   outputs=raw[OUTPUT_COLS]
-  outputLabels=list(outputs)+[label+"_exists" for label in list(outputs)]
-  outputs=pd.DataFrame(np.concatenate((outputs,pd.isnull(outputs)),axis=1),columns=outputLabels)
+  outputs=GenMissingDataColumns(outputs)
   outputs = outputs.replace("NaN", 0)
   inputs=raw.drop(OUTPUT_COLS,axis=1)
+  inputs = GenMissingDataColumns(inputs)
   inputs=inputs.replace("NaN",0)
   #normalize inputs
   inNormalizer=sklearn.preprocessing.Normalizer().fit(inputs)
@@ -60,7 +60,7 @@ def PreprocData():
   inputsNormed=inNormalizer.transform(inputs)
   outputsNormed=outNormalizer.transform(outputs)
   #separate into train and test set
-  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputLabels)),(len(OUTPUT_COLS),inputs.shape[0])
+  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(outputs.shape[0],inputs.shape[0])
 
 
 BATCH_SIZE=50
