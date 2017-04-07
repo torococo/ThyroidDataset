@@ -47,17 +47,20 @@ def PreprocData():
 #           "'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
 
   raw = raw.drop(DROP_COLS, axis=1)
-  raw = raw.replace("NaN", 0)
 
   outputs=raw[OUTPUT_COLS]
+  outputLabels=list(outputs)+[label+"_exists" for label in list(outputs)]
+  outputs=pd.DataFrame(np.concatenate((outputs,pd.isnull(outputs)),axis=1),columns=outputLabels)
+  outputs = outputs.replace("NaN", 0)
   inputs=raw.drop(OUTPUT_COLS,axis=1)
+  inputs=inputs.replace("NaN",0)
   #normalize inputs
   inNormalizer=sklearn.preprocessing.Normalizer().fit(inputs)
   outNormalizer=sklearn.preprocessing.Normalizer().fit(outputs)
   inputsNormed=inNormalizer.transform(inputs)
   outputsNormed=outNormalizer.transform(outputs)
   #separate into train and test set
-  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(len(OUTPUT_COLS),inputs.shape[0])
+  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputLabels)),(len(OUTPUT_COLS),inputs.shape[0])
 
 
 BATCH_SIZE=50
@@ -66,7 +69,7 @@ data,normalizers,labels,IOsizes=PreprocData()
 trainingData,testingData=SeparateData(data[0],data[1],0.4,BATCH_SIZE,True)
 #create graph
 #netTF=FullyConnectedNetwork([100,100,100],trainingData[0].shape[1],trainingData[1].shape[1])
-netTF=FullyConnectedNetwork([300,200,100],trainingData[0].shape[1],trainingData[1].shape[1])
+netTF=FullyConnectedNetworkWithMissingOutputs([300,200,100],trainingData[0].shape[1],int(trainingData[1].shape[1]/2))
 
 #pass graph components to interface
 net=TFinterface(netTF.graph,netTF.OutputLayerTF,netTF.ErrorTF,netTF.TrainTF,netTF.GradsTF,netTF.InitVarsTF,"inputsPL","outputsPL","dropoutPL","outMasksPL")
