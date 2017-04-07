@@ -231,6 +231,35 @@ def GenBatchSet(inputs,outputs,batchSize):
   batchOutputs=outputs[indices].reshape((nEntries//batchSize,batchSize,outputs.shape[1]))
   return batchInputs,batchOutputs
 
+def ColTransform(df, columnToTransform, colInfos, bDropOriginal=False):
+  #pass in a list of lists with [name,[[name,val]],default]
+  for colInfo in colInfos:
+    df[colInfo[0]]=colInfo[2]
+  for colInfo in colInfos:
+    for [subName,subVal] in colInfo[1]:
+      df.loc[df[columnToTransform] == subName, colInfo[0]]=subVal
+  if bDropOriginal:
+    df=df.drop(columnToTransform, axis=1)
+  return df
+
+def MultiColTransform(df, columnsToTransform, colInfos, bDropOriginal=False):
+  #pass in a list of lists with [name,[[[name],val]],[default]]
+  for colInfo in colInfos:
+    df[colInfo[0]]=colInfo[2]
+  for colInfo in colInfos:
+    for [subNames,subVal] in colInfo[1]:
+      mask=np.ones((df.shape[0]), dtype=bool)
+      for i in range(len(subNames)):
+        subName=subNames[i]
+        column=df[columnsToTransform[i]]
+        np.logical_and(mask,column.where(column==subName),mask)
+      df[mask]=subVal
+  if bDropOriginal:
+    for column in columnsToTransform:
+      df.drop(column)
+  return df
+
+
 def GenMissingDataColumns(data):
   outputLabels=list(data)+[label+"_exists" for label in list(data)]
   return pd.DataFrame(np.concatenate((data,pd.isnull(data)),axis=1),columns=outputLabels)
