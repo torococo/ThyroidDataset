@@ -14,7 +14,7 @@ from Utils import *
 def GetNanDropLabels(raw,acceptableNanProp):
   labels=list(raw)
   minAcceptable=acceptableNanProp*raw.shape[0]
-  print(minAcceptable)
+  #print(minAcceptable)
   nullSums= raw.isnull().sum()
   ret=[]
   for label in labels:
@@ -24,52 +24,45 @@ def GetNanDropLabels(raw,acceptableNanProp):
 
 def PreprocData():
   #separate inputs and outputs
-  raw = pd.read_excel("USETHISFM.xlsx")
-  dropLabels=GetNanDropLabels(raw,0.1)
-  #missingpercentage = pd.read_csv("Missing.csv")
+  raw = pd.read_excel("TyroidData_Categorized_PV.xlsx")
+  dropLabels=GetNanDropLabels(raw,0.9)
 
-  #indexmissing = np.where(missingpercentage >= 0.5)
-  #namemissing = raw[indexmissing[0]]
 
-  #print(namemissing)
+  OUTPUT_COLS = ["Histol-definitive_1_1.1_1.3",	"Histol-definitive_1.2_1.4_1.5",	"Histol-definitive_2.1", "Histol-definitive_2_2.2_2.3_2.4_2.5_2.6_2.7",	"Histol-definitive_3",	"Histol-definitive_4_4.1_5_5.1",	"Histol-definitive_6",	"Histol-definitive_7",	"malignant",	"mal_wo_NIFT",	"ETE_p_s_modified",	"R_status_s_modified",	"caps_invas_s_modified", "vasc_invas_s_modified",	"ENE_s",	"#LNM_s",	"T_dx_s_modified",	"N_dx_s_modified",	"M_dx_s_modified",	"Stage_s_modified",	"cancer risk", "Recurrence_s_modified",	"disease_status_last_f-u_s_modified"]
+  #for label in dropLabels:
+  #  if label in OUTPUT_COLS:OUTPUT_COLS.remove(label)
 
-  OUTPUT_COLS = ["'Histol-definitive'","'mal_wo_NIFT'","'capsule_s'","'capsule'",	"'caps_invas_s'",	"'vasc_invas_s'","'p-size-s'",	"'#LNM_s'",	"'#LN_resec_s'","'#LN_resec'",	"'size_LN_s'",	"'conc. Cancer_s'",	"'T_dx_s'","'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
-  for label in dropLabels:
-    if label in OUTPUT_COLS:OUTPUT_COLS.remove(label)
-# DROP_COLS=["'cancer risk'","'ID'"] #,"'malignant'"]
-
-  DROP_COLS = ["'ID'"]+dropLabels
-  # ,namemissing]
-# DROP_COLS=["'ID'","'mal_wo_NIFT'",	"'capsule_s'",
-#           "'capsule'",	"'caps_invas_s'",	"'vasc_invas_s'",
-#           "'p-size-s'",	"'#LNM_s'",	"'#LN_resec_s'",
-#           "'#LN_resec'",	"'size_LN_s'",	"'conc. Cancer_s'",	"'T_dx_s'",
-#           "'N_dx_s'",	"'M_dx_s'",	"'Stage_s'",	"'pt_dx'",	"'Recurrence_s'","'malignant'",	"'cancer risk'"]
+  DROP_COLS = ["ID","ETE_p_s","Gender","Other_ca","echogen_1","calcif_1","US_pat_1","vascul_1","Beth_gp_s","OP_s","thy_dysfx","Scint_scan_s","echogen_MM","calcifications_MM","US_pat_MM_mod","vasc_MM","echogen_CL","margin_CL_classified","US_pat_CL_mod","vasc_CL","Histol-definitive","R_status_s","caps_invas_s","vasc_invas_s","T_dx_s","N_dx_s","M_dx_s","Stage_s","Recurrence_s","disease_status_last_f-u_s"]+dropLabels
 
   raw = raw.drop(DROP_COLS, axis=1)
-
+ # raw.to_excel("test.xlsx")
   outputs=raw[OUTPUT_COLS]
-  outputs=GenMissingDataColumns(outputs)
-  outputs = outputs.replace("NaN", 0)
+  outputsMissing=GenMissingDataColumns(outputs)
+  outputs = outputs.replace(" ", 0)
+  outputs = outputs.replace("NaN",0)
   inputs=raw.drop(OUTPUT_COLS,axis=1)
-  inputs = GenMissingDataColumns(inputs)
+  inputsMissing = GenMissingDataColumns(inputs)
+  inputs=inputs.replace(" ",0)
   inputs=inputs.replace("NaN",0)
   #normalize inputs
-  inNormalizer=sklearn.preprocessing.Normalizer().fit(inputs)
-  outNormalizer=sklearn.preprocessing.Normalizer().fit(outputs)
+  inNormalizer=sklearn.preprocessing.StandardScaler().fit(inputs)
+  outNormalizer=sklearn.preprocessing.StandardScaler().fit(outputs)
   inputsNormed=inNormalizer.transform(inputs)
   outputsNormed=outNormalizer.transform(outputs)
+  inputs=ConcatMissingColumns(inputs,inputsMissing)
+  outputs=ConcatMissingColumns(outputs,outputsMissing)
+
   #separate into train and test set
-  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(outputs.shape[0],inputs.shape[0])
+  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(outputs.shape[1],inputs.shape[1])
 
 
 BATCH_SIZE=50
 data,normalizers,labels,IOsizes=PreprocData()
 
-trainingData,testingData=SeparateData(data[0],data[1],0.4,BATCH_SIZE,True)
+trainingData,testingData=SeparateData(data[0],data[1],0.9,BATCH_SIZE,True)
 #create graph
 #netTF=FullyConnectedNetwork([100,100,100],trainingData[0].shape[1],trainingData[1].shape[1])
-netTF=FullyConnectedNetworkWithMissingOutputs([300,200,100],trainingData[0].shape[1],int(trainingData[1].shape[1]/2))
+netTF=FullyConnectedNetworkWithMissingOutputs([100],trainingData[0].shape[1],int(trainingData[1].shape[1]/2))
 
 #pass graph components to interface
 net=TFinterface(netTF.graph,netTF.OutputLayerTF,netTF.ErrorTF,netTF.TrainTF,netTF.GradsTF,netTF.InitVarsTF,"inputsPL","outputsPL","dropoutPL","outMasksPL")
@@ -81,13 +74,21 @@ errorVals=net.GenAndRunBatchTraining(trainingData[0],trainingData[1],BATCH_SIZE,
 outputs,error=net.Test(testingData[0],testingData[1])
 
 #get gradient values on testing data
-#gradVals=net.GetGradientValues(testingData[0],testingData[1],[1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
-#gradSums=SumGradients(gradVals)
+gradVals=net.GetGradientValues(testingData[0],testingData[1],[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
+gradSums=SumGradients(gradVals)
 
 #Plot training and testing error
 axs=GenAxs(1,1)
 #axs=GenAxs(1,1)
 PlotTrainingError(axs[0],errorVals,error)
+predictedOutputs=normalizers[1].inverse_transform(outputs)#[:,0:outputsWithZeros.shape[1]/2]
+outputFrame=pd.DataFrame(predictedOutputs,columns=labels[1])
+outputFrame.to_csv("predictedOutputs.csv")
+actualOutputs=normalizers[1].inverse_transform(testingData[1][:,0:testingData[1].shape[1]/2])#[:,0:testingData[1].shape[1]/2]
+actualFrame=pd.DataFrame(actualOutputs,columns=labels[1])
+actualFrame.to_csv("actualOutputs.csv")
+
+print(predictedOutputs)
 plt.show()
 
 #axs=GenAxs(1,1)
@@ -95,7 +96,7 @@ plt.show()
 #plt.show()
 
 #df = pd.DataFrame(gradSums)
-#df.to_csv("SaveGradSums_HisDef.csv")
+#df.to_csv("SaveGradSums_new.csv")
 
-dfL = pd.DataFrame(labels[0])
-dfL.to_csv("SaveLabels.csv")
+#dfL = pd.DataFrame(labels[0])
+#dfL.to_csv("SaveLabels.csv")

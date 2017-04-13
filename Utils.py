@@ -260,9 +260,11 @@ def MultiColTransform(df, columnsToTransform, colInfos, bDropOriginal=False):
   return df
 
 
-def GenMissingDataColumns(data):
+def GenMissingDataColumns(data):return pd.isnull(data)
+
+def ConcatMissingColumns(data,missingColumns):
   outputLabels=list(data)+[label+"_exists" for label in list(data)]
-  return pd.DataFrame(np.concatenate((data,pd.isnull(data)),axis=1),columns=outputLabels)
+  return pd.DataFrame(np.concatenate((data, pd.isnull(data)), axis=1), columns=outputLabels)
 
 
 #optionsDict should be dict of key:value pairs, where keys are strings
