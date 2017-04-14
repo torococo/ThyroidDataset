@@ -25,7 +25,7 @@ def GetNanDropLabels(raw,acceptableNanProp):
 def PreprocData():
   #separate inputs and outputs
   raw = pd.read_excel("TyroidData_Categorized_PV.xlsx")
-  dropLabels=GetNanDropLabels(raw,0.9)
+  dropLabels=[]#GetNanDropLabels(raw,0.9)
 
 
   OUTPUT_COLS = ["Histol-definitive_1_1.1_1.3",	"Histol-definitive_1.2_1.4_1.5",	"Histol-definitive_2.1", "Histol-definitive_2_2.2_2.3_2.4_2.5_2.6_2.7",	"Histol-definitive_3",	"Histol-definitive_4_4.1_5_5.1",	"Histol-definitive_6",	"Histol-definitive_7",	"malignant",	"mal_wo_NIFT",	"ETE_p_s_modified",	"R_status_s_modified",	"caps_invas_s_modified", "vasc_invas_s_modified",	"ENE_s",	"#LNM_s",	"T_dx_s_modified",	"N_dx_s_modified",	"M_dx_s_modified",	"Stage_s_modified",	"cancer risk", "Recurrence_s_modified",	"disease_status_last_f-u_s_modified"]
@@ -44,25 +44,27 @@ def PreprocData():
   inputsMissing = GenMissingDataColumns(inputs)
   inputs=inputs.replace(" ",0)
   inputs=inputs.replace("NaN",0)
+  inLabels=list(inputs)
+  outLabels=list(outputs)
   #normalize inputs
   inNormalizer=sklearn.preprocessing.StandardScaler().fit(inputs)
   outNormalizer=sklearn.preprocessing.StandardScaler().fit(outputs)
-  inputsNormed=inNormalizer.transform(inputs)
-  outputsNormed=outNormalizer.transform(outputs)
-  inputs=ConcatMissingColumns(inputs,inputsMissing)
-  outputs=ConcatMissingColumns(outputs,outputsMissing)
+  inputs=inNormalizer.transform(inputs)
+  outputs=outNormalizer.transform(outputs)
+  inputs=ConcatMissingColumns(inputs,inputsMissing,inLabels)
+  outputs=ConcatMissingColumns(outputs,outputsMissing,outLabels)
 
   #separate into train and test set
-  return (inputsNormed,outputsNormed),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(outputs.shape[1],inputs.shape[1])
+  return (np.asarray(inputs),np.asarray(outputs)),(inNormalizer,outNormalizer),(list(inputs),list(outputs)),(outputs.shape[1],inputs.shape[1])
 
 
-BATCH_SIZE=50
+BATCH_SIZE=10
 data,normalizers,labels,IOsizes=PreprocData()
 
 trainingData,testingData=SeparateData(data[0],data[1],0.9,BATCH_SIZE,True)
 #create graph
 #netTF=FullyConnectedNetwork([100,100,100],trainingData[0].shape[1],trainingData[1].shape[1])
-netTF=FullyConnectedNetworkWithMissingOutputs([100],trainingData[0].shape[1],int(trainingData[1].shape[1]/2))
+netTF=FullyConnectedNetworkWithMissingOutputs([1000],trainingData[0].shape[1],int(trainingData[1].shape[1]/2))
 
 #pass graph components to interface
 net=TFinterface(netTF.graph,netTF.OutputLayerTF,netTF.ErrorTF,netTF.TrainTF,netTF.GradsTF,netTF.InitVarsTF,"inputsPL","outputsPL","dropoutPL","outMasksPL")
@@ -82,10 +84,10 @@ axs=GenAxs(1,1)
 #axs=GenAxs(1,1)
 PlotTrainingError(axs[0],errorVals,error)
 predictedOutputs=normalizers[1].inverse_transform(outputs)#[:,0:outputsWithZeros.shape[1]/2]
-outputFrame=pd.DataFrame(predictedOutputs,columns=labels[1])
+outputFrame=pd.DataFrame(predictedOutputs,columns=labels[1][0:len(labels[1])//2])
 outputFrame.to_csv("predictedOutputs.csv")
 actualOutputs=normalizers[1].inverse_transform(testingData[1][:,0:testingData[1].shape[1]/2])#[:,0:testingData[1].shape[1]/2]
-actualFrame=pd.DataFrame(actualOutputs,columns=labels[1])
+actualFrame=pd.DataFrame(actualOutputs,columns=labels[1][0:len(labels[1])//2])
 actualFrame.to_csv("actualOutputs.csv")
 
 print(predictedOutputs)

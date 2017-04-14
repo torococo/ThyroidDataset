@@ -219,6 +219,12 @@ def SeparateData(inputs,outputs,trainProp,batchSize,bShuffle):
   indices=np.arange(0,nEntries)
   if bShuffle:
     np.random.shuffle(indices)
+    print(indices[0:nTraining])
+    out1=inputs[indices[0:nTraining]]
+
+    out2=outputs[indices[0:nTraining]]
+    out3=inputs[indices[nTraining:]]
+    out4=outputs[indices[nTraining:]]
   return[inputs[indices[0:nTraining]],outputs[indices[0:nTraining]]],[inputs[indices[nTraining:]],outputs[indices[nTraining:]]]
 
 def GenBatchSet(inputs,outputs,batchSize):
@@ -262,9 +268,9 @@ def MultiColTransform(df, columnsToTransform, colInfos, bDropOriginal=False):
 
 def GenMissingDataColumns(data):return pd.isnull(data)
 
-def ConcatMissingColumns(data,missingColumns):
-  outputLabels=list(data)+[label+"_exists" for label in list(data)]
-  return pd.DataFrame(np.concatenate((data, pd.isnull(data)), axis=1), columns=outputLabels)
+def ConcatMissingColumns(data,missingColumns,labels):
+  outputLabels=labels+[label+"_exists" for label in labels]
+  return pd.DataFrame(np.concatenate((data, missingColumns), axis=1), columns=outputLabels)
 
 
 #optionsDict should be dict of key:value pairs, where keys are strings
@@ -394,7 +400,7 @@ class FullyConnectedNetworkWithMissingOutputs:
       self.OutputLayerTF=LastLayerTF
 
       #error function
-      self.ErrorTF=tf.reduce_mean(tf.square((LastLayerTF-outputValsTF)*outputExistsTF))
+      self.ErrorTF=(tf.reduce_mean(tf.square((LastLayerTF-outputValsTF)*outputExistsTF)))/tf.reduce_mean(outputExistsTF)
 
       #training
       self.TrainTF=tf.train.AdamOptimizer().minimize(self.ErrorTF)
