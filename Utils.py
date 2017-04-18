@@ -265,8 +265,11 @@ def MultiColTransform(df, columnsToTransform, colInfos, bDropOriginal=False):
       df.drop(column)
   return df
 
-
-def GenMissingDataColumns(data):return pd.isnull(data)
+def GenMissingDataColumns(data,nanStrings=None):
+  if nanStrings:
+    for nanString in nanStrings:
+      data.replace(nanString,np.NaN)
+  return pd.notnull(data)
 
 def ConcatMissingColumns(data,missingColumns,labels):
   outputLabels=labels+[label+"_exists" for label in labels]

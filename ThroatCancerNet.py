@@ -29,19 +29,20 @@ def PreprocData():
 
 
   OUTPUT_COLS = ["Histol-definitive_1_1.1_1.3",	"Histol-definitive_1.2_1.4_1.5",	"Histol-definitive_2.1", "Histol-definitive_2_2.2_2.3_2.4_2.5_2.6_2.7",	"Histol-definitive_3",	"Histol-definitive_4_4.1_5_5.1",	"Histol-definitive_6",	"Histol-definitive_7",	"malignant",	"mal_wo_NIFT",	"ETE_p_s_modified",	"R_status_s_modified",	"caps_invas_s_modified", "vasc_invas_s_modified",	"ENE_s",	"#LNM_s",	"T_dx_s_modified",	"N_dx_s_modified",	"M_dx_s_modified",	"Stage_s_modified",	"cancer risk", "Recurrence_s_modified",	"disease_status_last_f-u_s_modified"]
+  #OUTPUT_COLS = ["Histol-definitive_1_1.1_1.3",	"Histol-definitive_1.2_1.4_1.5"]
   #for label in dropLabels:
   #  if label in OUTPUT_COLS:OUTPUT_COLS.remove(label)
 
-  DROP_COLS = ["ID","ETE_p_s","Gender","Other_ca","echogen_1","calcif_1","US_pat_1","vascul_1","Beth_gp_s","OP_s","thy_dysfx","Scint_scan_s","echogen_MM","calcifications_MM","US_pat_MM_mod","vasc_MM","echogen_CL","margin_CL_classified","US_pat_CL_mod","vasc_CL","Histol-definitive","R_status_s","caps_invas_s","vasc_invas_s","T_dx_s","N_dx_s","M_dx_s","Stage_s","Recurrence_s","disease_status_last_f-u_s"]+dropLabels
+  DROP_COLS = ["ID","ETE_p_s","Gender","Other_ca","echogen_1","calcif_1","US_pat_1","vascul_1","Beth_gp_s","OP_s","thy_dysfx","Scint_scan_s","echogen_MM","calcifications_MM","US_pat_MM_mod","vasc_MM","echogen_CL","margin_CL_classified","US_pat_CL_mod","vasc_CL","Histol-definitive","R_status_s","caps_invas_s","vasc_invas_s","T_dx_s","N_dx_s","M_dx_s","Stage_s","Recurrence_s","disease_status_last_f-u_s"]+dropLabels#+[	"Histol-definitive_2.1", "Histol-definitive_2_2.2_2.3_2.4_2.5_2.6_2.7",	"Histol-definitive_3",	"Histol-definitive_4_4.1_5_5.1",	"Histol-definitive_6",	"Histol-definitive_7",	"malignant",	"mal_wo_NIFT",	"ETE_p_s_modified",	"R_status_s_modified",	"caps_invas_s_modified", "vasc_invas_s_modified",	"ENE_s",	"#LNM_s",	"T_dx_s_modified",	"N_dx_s_modified",	"M_dx_s_modified",	"Stage_s_modified",	"cancer risk", "Recurrence_s_modified",	"disease_status_last_f-u_s_modified"]
 
   raw = raw.drop(DROP_COLS, axis=1)
  # raw.to_excel("test.xlsx")
   outputs=raw[OUTPUT_COLS]
-  outputsMissing=GenMissingDataColumns(outputs)
+  outputsMissing=GenMissingDataColumns(outputs,[" ","NaN"])
   outputs = outputs.replace(" ", 0)
   outputs = outputs.replace("NaN",0)
   inputs=raw.drop(OUTPUT_COLS,axis=1)
-  inputsMissing = GenMissingDataColumns(inputs)
+  inputsMissing = GenMissingDataColumns(inputs,[" ","NaN"])
   inputs=inputs.replace(" ",0)
   inputs=inputs.replace("NaN",0)
   inLabels=list(inputs)
@@ -71,13 +72,13 @@ net=TFinterface(netTF.graph,netTF.OutputLayerTF,netTF.ErrorTF,netTF.TrainTF,netT
 #start graph
 net.StartSession()
 #training
-errorVals=net.GenAndRunBatchTraining(trainingData[0],trainingData[1],BATCH_SIZE,100,0.5)
+errorVals=net.GenAndRunBatchTraining(trainingData[0],trainingData[1],BATCH_SIZE,100,0.1)
 #testing
 outputs,error=net.Test(testingData[0],testingData[1])
 
 #get gradient values on testing data
-gradVals=net.GetGradientValues(testingData[0],testingData[1],[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
-gradSums=SumGradients(gradVals)
+#gradVals=net.GetGradientValues(testingData[0],testingData[1],[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) #,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]) #[1,0])
+#gradSums=SumGradients(gradVals)
 
 #Plot training and testing error
 axs=GenAxs(1,1)
